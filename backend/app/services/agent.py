@@ -21,8 +21,8 @@ LANGUAGE_NAME_MAP: Dict[LanguageCode, str] = {
     LanguageCode.ko: "Korean",
     LanguageCode.en: "English",
     LanguageCode.zh: "Chinese",
-    LanguageCode.ja: "Japanese",
-    LanguageCode.th: "Thai",
+    LanguageCode.vi: "Vietnamese",
+    LanguageCode.uk: "Ukrainian",
 }
 
 

@@ -9,8 +9,8 @@ class LanguageCode(str, Enum):
     ko = "ko"
     en = "en"
     zh = "zh"
-    ja = "ja"
-    th = "th"
+    vi = "vi"
+    uk = "uk"
 
 
 class DesignChangeInput(BaseModel):
@@ -68,7 +68,7 @@ class ChatMessage(BaseModel):
 class WorkerChatRequest(BaseModel):
     language: LanguageCode = Field(
         description="노동자가 선택한 언어 코드",
-        examples=["ko", "en", "zh", "ja", "th"],
+        examples=["ko", "en", "zh", "vi", "uk"],
     )
     question: str = Field(description="노동자가 물어보는 질문")
     worker_id: Optional[str] = Field(
