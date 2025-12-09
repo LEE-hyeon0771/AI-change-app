@@ -1,0 +1,36 @@
+# === General ===
+.DS_Store
+Thumbs.db
+*.log
+
+# === Python / FastAPI backend ===
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Environment / secrets
+.env
+.env.*
+
+# Runtime data (FAISS index, change logs, etc.)
+backend/data/
+
+# === Flutter / Dart frontend ===
+frontend_flutter/.dart_tool/
+frontend_flutter/.packages
+frontend_flutter/.flutter-plugins
+frontend_flutter/.flutter-plugins-dependencies
+frontend_flutter/.metadata
+frontend_flutter/build/
+
+# === IDE / Editor ===
+.vscode/
+.idea/
+*.iml
+
+

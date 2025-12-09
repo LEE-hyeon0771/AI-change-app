@@ -1,1 +1,384 @@
+## AI-change-app
+
+설계 변경(특히 VE 제안) 정보를 한 번에 관리하고, 현장 노동자에게 다국어로 설명해 주는 **엔드투엔드 RAG 애플리케이션**입니다.  
+관리자는 엑셀/CSV/관리자 페이지를 통해 설계 변경 데이터를 등록하고, 노동자는 모바일/웹 UI에서 변경사항을 확인하고 각국 언어(한국어, 영어, 중국어, 베트남어, 우크라이나어)로 질의응답을 받을 수 있습니다.
+
+---
+
+## 1. 프로젝트 목적
+
+- **설계VE / 설계변경 내역의 중앙 관리**
+  - 기존에는 설계VE 제안 목록, 변경사항이 엑셀/문서로 흩어져 있어 검색·공유가 어렵고, 최신 내용이 어디에 있는지 알기 힘듦.
+  - 이 프로젝트는 해당 데이터를 **벡터 DB(FAISS)** 로 통합하여, 질의응답 기반으로 빠르게 찾아볼 수 있도록 함.
+
+- **현장 노동자 친화적인 다국어 설명**
+  - 설계 변경 문서 자체는 기술적이고 한국어 중심이지만, 실제 현장은 다국적 인력으로 구성되는 경우가 많음.
+  - 노동자용 페이지는 **한국어/영어/중국어/베트남어/우크라이나어** 5개 언어 탭을 제공하고, 선택한 언어로 설계 변경을 풀어서 설명.
+
+- **관리자-노동자 간 변경사항 알림 플로우**
+  - 관리자가 새로운 변경사항(VE 제안 포함)을 등록하면, 노동자 화면 상단에 **“새 설계변경 사항이 있습니다”** 알림이 자동 표시.
+  - 노동자는 “변경사항 보기” 버튼으로 **기관명/사업명/제안명/제안일자/요청 발주처**를 바로 확인하고, 추가 질문은 챗봇으로 이어감.
+
+- **기존 엑셀(xlsx) 기반 VE 데이터의 자동 인제스트**
+  - “설계VE 상세내용 - VE제안 목록” 양식의 엑셀 파일을 그대로 `backend/app/data/` 에 넣고, 스크립트 한 번으로 **일괄 임베딩** 가능.
+  - 헤더 행 탐지, 제안일자 파싱, LCC/가치향상 수치 → 설명 텍스트 변환까지 자동화하여 운영 부담 최소화.
+
+---
+
+## 2. 전체 아키텍처 개요
+
+- **Frontend (Flutter)**
+  - 앱 구조: `frontend_flutter/lib`
+    - `main.dart` : 홈(역할 선택) 화면
+    - `administer.dart` : 관리자용 설계 변경/VE 제안 등록 페이지
+    - `worker.dart` : 노동자용 페이지 (알림 + 다국어 챗봇)
+  - 타겟: 웹(Chrome) 및 모바일(에뮬레이터/실디바이스)
+
+- **Backend (FastAPI + LangChain + OpenAI + FAISS)**
+  - 디렉터리: `backend/app`
+    - `core/`
+      - `config.py` : 설정 및 .env 로딩, OpenAI 모델/키, 데이터 디렉터리
+      - `models.py` : Pydantic 데이터 모델
+    - `services/`
+      - `vectorstore.py` : FAISS 기반 벡터 DB (임베딩, 저장, 검색)
+      - `agent.py` : LangChain RAG 에이전트 (노동자용 다국어 챗봇)
+      - `ingest_existing_data.py` : JSONL 기반 초기 데이터 적재
+      - `ingest_ve_csv.py` : **엑셀/CSV VE 제안 목록 → 벡터DB** 인제스트
+    - `main.py` : FastAPI 엔트리포인트 (관리자/노동자 API)
+
+- **데이터/벡터 저장 위치**
+  - `backend/data/faiss_index/index.faiss` : FAISS 인덱스
+  - `backend/data/faiss_index/index.pkl` : 메타데이터/Docstore
+  - `backend/data/change_log.jsonl` : 설계변경 기록(append only 로그)
+
+---
+
+## 3. 개발 Flow
+
+### 3-1. 초기 세팅
+
+1. **리포지토리 클론 후 루트로 이동**
+   - 예: `D:\AI-change-app`
+
+2. **Python 가상환경 생성 (Windows 기준)**
+   - PowerShell:
+     ```powershell
+     cd D:\AI-change-app
+     python -m venv .venv
+     .\.venv\Scripts\Activate.ps1
+     ```
+
+3. **백엔드 의존성 설치**
+   ```powershell
+   cd backend
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt
+   ```
+
+4. **OpenAI API 키 설정**
+   - 루트에 `.env` 파일 생성:
+     ```env
+     OPENAI_API_KEY=sk-...본인키...
+     ```
+   - `backend/app/core/config.py` 에서 자동으로 `.env` 를 읽어 `settings.openai_api_key` 에 반영.
+
+5. **Flutter 의존성 설치**
+   ```bash
+   cd frontend_flutter
+   flutter pub get
+   ```
+
+### 3-2. 기존 VE 엑셀 데이터 인제스트 (선택)
+
+엑셀 양식: **"설계VE 상세내용 - VE제안 목록"** (모든 파일의 컬럼 구성이 동일하다고 가정).
+
+1. `backend/app/data/` 아래에 엑셀(xlsx) 파일 복사
+   - 예:  
+     - `backend/app/data/설계VE 상세내용 - VE제안 목록 (1).xlsx`  
+     - `backend/app/data/설계VE 상세내용 - VE제안 목록 (2).xlsx` … 등
+
+2. 인제스트 스크립트 실행
+   ```powershell
+   cd D:\AI-change-app
+   .\.venv\Scripts\Activate.ps1
+   cd backend
+   python -m app.services.ingest_ve_csv app\data
+   ```
+
+   - 동작:
+     - 디렉터리(`app\data`) 내의 모든 `.xlsx` / `.xlsm` / `.csv` 파일을 순회
+     - 엑셀 상단의 여러 제목 행 중, `기관명,사업명,제안명,제안일자` 네 컬럼이 모두 포함된 행을 **헤더**로 자동 인식
+     - 이후 행들을 `DesignChangeInput` 으로 변환하여 `add_design_change()` 로 저장
+     - `change_log.jsonl` 과 `FAISS 인덱스` 에 누적
+   - 로그 예시:
+     ```text
+     [DONE] 설계VE 상세내용 - VE제안 목록 (1).xlsx → 총 128건 성공, 0건 실패
+     ```
+
+3. 제안일자(날짜)가 `--` 등으로 비어 있는 경우
+   - 파싱 에러를 내지 않고 기본값 `2000-01-01` 로 저장 (검색에는 영향 없음)
+   - 실제 원본 값(`--`)은 description 텍스트 안에 그대로 유지
+
+### 3-3. FastAPI 백엔드 실행
+
+```powershell
+cd D:\AI-change-app
+.\.venv\Scripts\Activate.ps1
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- Swagger UI: `http://localhost:8000/docs`
+- 헬스체크: `GET /health`
+  - `openai_configured` 필드로 API 키 설정 여부 확인 가능
+
+### 3-4. Flutter 프론트엔드 실행
+
+#### Web (Chrome)
+
+```powershell
+cd D:\AI-change-app\frontend_flutter
+flutter pub get
+flutter run -d chrome
+```
+
+- `lib/api_config.dart` 의 `apiBaseUrl` 값이 백엔드 주소(`http://localhost:8000` 또는 `http://10.0.2.2:8000`)와 맞는지 확인.
+
+#### Mobile (에뮬레이터 또는 연결 디바이스)
+
+```powershell
+cd D:\AI-change-app\frontend_flutter
+flutter pub get
+flutter run
+```
+
+---
+
+## 4. 주요 기능 및 흐름
+
+### 4-1. 관리자 페이지 (`AdministerPage`)
+
+경로: `frontend_flutter/lib/administer.dart`
+
+- **변경일(제안일자) 선택**
+  - 상단에서 DatePicker로 날짜 선택.
+
+- **제안정보 입력**
+  - `제안명` (필수)
+  - `기관명` (필수)
+  - `사업명` (필수)
+  - `요청 발주처` (선택)
+  - `키워드` (선택)
+  - `작성자` (선택)
+
+- **생애주기비용(LCC) 절감효과 입력**
+  - 개선전:
+    - 건설사업 비용(백만원)
+    - 유지관리 비용(백만원)
+    - 계(백만원)
+  - 개선후:
+    - 건설사업 비용(백만원)
+    - 유지관리 비용(백만원)
+    - 계(백만원)
+  - 절감액(백만원), 절감율(%)
+
+- **가치향상효과 입력**
+  - 개선전:
+    - 성능점수(점)
+    - 가치점수(점)
+  - 개선후:
+    - 성능점수(점)
+    - 가치점수(점)
+
+- **등록 버튼 동작**
+  - 위 입력값을 기반으로 설명 텍스트(`description`)를 조합:
+    - `[VE 제안명] ...`, `[생애주기비용(LCC) 절감효과 - 개선전] ...` 등의 섹션 포함
+  - `POST /admin/changes` 로 전송:
+    - `change_date` : 선택 날짜
+    - `title` : 제안명
+    - `description` : 조합된 텍스트
+    - `author` : 작성자
+    - `organization` : 기관명
+    - `project_name` : 사업명
+    - `client` : 요청 발주처
+  - 백엔드는 이를 임베딩 후 FAISS / change_log 에 누적.
+
+### 4-2. 노동자 페이지 (`WorkerPage`)
+
+경로: `frontend_flutter/lib/worker.dart`
+
+- **상단 알림 영역**
+  - `GET /worker/latest-change` 를 15초 간격으로 폴링.
+  - 응답 모델 `LatestChangeResponse`:
+    - `has_change` : bool
+    - `latest` : { `id`, `change_date`, `title`, `created_at`, `organization`, `project_name`, `client` }
+  - 마지막으로 본 `id` 와 다를 경우:
+    - `새 설계변경 사항이 있습니다.` 메시지 표시
+  - 버튼:
+    - `변경사항 보기` : Dialog 로 **기관명/사업명/제안명/제안일자/요청 발주처** 표시
+    - `확인/읽음` : 마지막 확인한 변경 ID 업데이트
+
+- **다국어 탭 + 챗봇**
+  - `DefaultTabController` 로 5개 탭:
+    - 한국어(ko), English(en), 中文(zh), Tiếng Việt(vi), Українська(uk)
+  - 각 탭은 `WorkerChatTab(languageCode: 'ko' | 'en' | ...)` 인스턴스.
+
+- **채팅 동작**
+  - 사용자가 질문 입력 → `_sendMessage()` 호출:
+    - UI 상에서 사용자 메시지 추가
+    - `POST /worker/chat` 요청:
+      ```json
+      {
+        "language": "ko",
+        "question": "질문 내용",
+        "history": [
+          {"role": "user", "content": "..."},
+          {"role": "assistant", "content": "..."}
+        ]
+      }
+      ```
+  - 응답(`WorkerChatResponse`):
+    - `answer` : 선택 언어로 생성된 답변
+    - `language` : 응답 언어 코드
+    - `sources` : RAG 검색에 사용된 문서 ID/제목
+  - 프론트는 답변을 **타이핑 스트리밍 효과**로 표시:
+    - `Timer.periodic` 으로 짧은 간격(16ms)마다 2~3글자씩 추가하여,  
+      실제 스트리밍처럼 보이도록 구현.
+
+---
+
+## 5. 백엔드 API 상세
+
+### 5-1. 시스템/헬스체크
+
+- `GET /health`
+  - 응답:
+    - `status` : `"ok"`
+    - `time` : ISO8601 UTC 타임스탬프
+    - `openai_configured` : bool
+
+### 5-2. 관리자용 API
+
+- `POST /admin/changes`
+  - Request Body (`DesignChangeInput`):
+    - `change_date` : `YYYY-MM-DD`
+    - `title` : 제안명/변경 제목
+    - `description` : 상세 설명 텍스트
+    - `author` : 작성자 (선택)
+    - `organization` : 기관명 (선택)
+    - `project_name` : 사업명 (선택)
+    - `client` : 요청 발주처 (선택)
+  - 내부 동작:
+    - OpenAI 임베딩(`text-embedding-3-small`) 생성
+    - FAISS 인덱스에 `Document(page_content, metadata)` 로 추가
+    - `change_log.jsonl` 에 JSON 한 줄 append
+  - Response (`AdminChangeResponse`):
+    - `success`: bool
+    - `change`: `DesignChangeRecord` (id, created_at 등 포함)
+
+### 5-3. 노동자용 API
+
+- `GET /worker/latest-change`
+  - 최신 `DesignChangeRecord` 기반 요약 반환.
+  - 검색 기준:
+    - 서버 메모리 캐시 `_LATEST_CHANGE`  
+      없으면 `change_log.jsonl` 의 마지막 레코드를 읽어 복원.
+
+- `POST /worker/chat`
+  - Request Body (`WorkerChatRequest`):
+    - `language` : `"ko" | "en" | "zh" | "vi" | "uk"`
+    - `question` : 질문 텍스트
+    - `worker_id` : 선택
+    - `history` : 선택 (간단한 이전 대화)
+  - 내부 동작:
+    1. `vectorstore.get_retriever()` 로 유사 문서 k=5 검색
+    2. 검색 문서들을 `_format_docs()` 로 포맷:
+       - ID, 제목(제안명), 변경일(제안일자), 기관명, 사업명, 요청 발주처, 내용 요약 후보
+    3. `ChatPromptTemplate` + `ChatOpenAI(gpt-4.1-mini)` 로 RAG 체인 실행
+    4. 답변 맨 앞에 **기관명/사업명/제안명/제안일자/요청 발주처** 메타데이터 블록을  
+       지정 언어로 표현하도록 시스템 프롬프트에서 강제
+  - Response (`WorkerChatResponse`):
+    - `answer` : 지정 언어로 생성된 설명
+    - `language` : 언어 코드
+    - `sources` : 사용된 문서의 `id`, `title` 목록
+
+### 5-4. LangChain 에이전트 (RAG 체인) 개요
+
+- 위치: `backend/app/services/agent.py`
+- 역할: **노동자 질문 → 관련 설계/VE 문서 검색 → 다국어 답변 생성** 전체 파이프라인을 한 번에 수행하는 RAG 체인.
+- 구성 요소:
+  - **Retriever**:  
+    - `services/vectorstore.get_retriever()`  
+    - FAISS 인덱스에서 질문과 가장 유사한 문서 상위 k개(k=5)를 검색.
+  - **프롬프트 템플릿**:
+    - 시스템 메시지에 역할/제약을 명시:
+      - 설계 변경/VE 제안에 대해서만 답변
+      - 제공된 문서를 근거로 사용할 것
+      - 안전 관련 영향은 명확히 강조
+      - **답변 맨 앞에 기관명/사업명/제안명/제안일자/요청 발주처를 요약 블록 형태로 표시**하도록 강제
+    - 사용자 질문과 검색된 문서 목록(`context`)을 함께 LLM에 전달.
+  - **LLM 설정**:
+    - `ChatOpenAI(model="gpt-4.1-mini", temperature=0.2)`
+    - 낮은 temperature 로 사실/수치 왜곡을 줄이고, 지정 언어(`language_code`)로만 답변하도록 지시.
+  - **LCEL 체인**:
+    - `RunnableParallel` + `RunnableMap` 을 사용하여
+      - 질문과 언어코드, 검색 문서를 동시에 준비
+      - 문서 포맷팅 후 프롬프트에 바인딩
+    - `prompt | llm | StrOutputParser()` 형태로 최종 문자열 답변 생성.
+- 반환값:
+  - `worker_chat()` 함수는 LLM 답변과 함께, 재검색한 문서들의 `id` / `title` 을 `sources` 로 반환하여,
+    - UI 또는 추후 로깅/추적 시스템에서 “어떤 근거 문서를 참고했는지” 추적 가능하게 설계되어 있음.
+
+---
+
+## 6. 사용 기술 스택
+
+- **Backend**
+  - Python 3.10+
+  - FastAPI 0.115
+  - Uvicorn (ASGI 서버)
+  - Pydantic v2
+  - LangChain 0.3 (LCEL, RAG 체인)
+  - langchain-openai, langchain-community
+  - OpenAI:
+    - Chat: `gpt-4.1-mini`
+    - Embedding: `text-embedding-3-small`
+  - FAISS (faiss-cpu)
+  - OpenPyXL (xlsx 파싱)
+  - python-dotenv
+
+- **Frontend**
+  - Flutter 3.x (Dart)
+  - Material 3 UI
+  - HTTP 패키지 (`package:http/http.dart`)
+
+- **Infra / 기타**
+  - 로컬 개발 환경 기준 (Windows 10+)
+  - .venv 기반 Python 가상환경
+  - Git + `.gitignore`:
+    - `.venv`, `backend/data/`, `frontend_flutter/build/` 등은 기본적으로 Git 추적 제외
+
+---
+
+## 7. 향후 확장 아이디어
+
+- **권한/인증**
+  - 관리자/노동자 인증 및 역할 기반 접근 제어(RBAC)
+  - JWT 또는 OAuth2 기반 토큰 도입
+
+- **알림 채널 확장**
+  - 현재는 노동자 화면 내 폴링 기반 알림
+  - 향후 FCM(모바일 Push), 이메일, 사내 메신저(Slack/Teams) 연동 고려
+
+- **추론 전략 고도화**
+  - LangGraph / Agent Supervisor 도입해:
+    - “설계 변경 자동 요약 리포트 작성”
+    - “안전/품질 영향 여부 자동 태깅”
+    - “특정 기간/기관별 VE 성과 집계” 등 복합 워크플로우 처리
+
+- **관리자용 통계 대시보드**
+  - VE 제안 건수, 채택률, LCC 절감액, 가치향상도 등 지표 시각화
+  - 기관/사업/공종별 필터링과 Export 기능
+
+이 README 만으로도 프로젝트 목적, 구조, 실행 방법을 바로 파악하고  
 # AI-change-app
