@@ -54,6 +54,9 @@ class _AdministerPageState extends State<AdministerPage> {
   final TextEditingController _afterValueScoreController =
       TextEditingController();
 
+  // 관리자 코멘트 / 안전 규정 (선택)
+  final TextEditingController _commentController = TextEditingController();
+
   DateTime _selectedDate = DateTime.now();
   bool _isSubmitting = false;
 
@@ -77,6 +80,7 @@ class _AdministerPageState extends State<AdministerPage> {
     _beforeValueScoreController.dispose();
     _afterPerfScoreController.dispose();
     _afterValueScoreController.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -132,6 +136,14 @@ class _AdministerPageState extends State<AdministerPage> {
       ..writeln('성능점수(점): ${_trim(_afterPerfScoreController.text)}')
       ..writeln('가치점수(점): ${_trim(_afterValueScoreController.text)}');
 
+    final commentText = _trim(_commentController.text);
+    if (commentText.isNotEmpty) {
+      descriptionBuffer
+        ..writeln()
+        ..writeln('[관리자 코멘트 / 안전 규정]')
+        ..writeln(commentText);
+    }
+
     final payload = {
       "change_date": _selectedDate.toIso8601String().split('T').first,
       "title": _trim(_titleController.text),
@@ -179,6 +191,7 @@ class _AdministerPageState extends State<AdministerPage> {
         _beforeValueScoreController.clear();
         _afterPerfScoreController.clear();
         _afterValueScoreController.clear();
+        _commentController.clear();
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('설계 변경이 성공적으로 등록되었습니다.')),
@@ -207,302 +220,343 @@ class _AdministerPageState extends State<AdministerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('관리자 페이지'),
+    final base = Theme.of(context);
+    final lightTheme = base.copyWith(
+      scaffoldBackgroundColor: const Color(0xFFF3F4F6),
+      textTheme: ThemeData.light().textTheme,
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        titleTextStyle: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+    );
+
+    return Theme(
+      data: lightTheme,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('관리자 페이지'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '변경일: ${_selectedDate.toLocal().toString().split(' ').first}',
-                        style: const TextStyle(fontSize: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '변경일: ${_selectedDate.toLocal().toString().split(' ').first}',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: _pickDate,
+                          icon: const Icon(Icons.calendar_today),
+                          label: const Text('날짜 선택'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      '제안정보',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: '제안명',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return '제안명을 입력해 주세요.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _organizationController,
+                      decoration: const InputDecoration(
+                        labelText: '기관명',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return '기관명을 입력해 주세요.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _projectNameController,
+                      decoration: const InputDecoration(
+                        labelText: '사업명',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return '사업명을 입력해 주세요.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _clientController,
+                      decoration: const InputDecoration(
+                        labelText: '요청 발주처',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    TextButton.icon(
-                      onPressed: _pickDate,
-                      icon: const Icon(Icons.calendar_today),
-                      label: const Text('날짜 선택'),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _keywordController,
+                      decoration: const InputDecoration(
+                        labelText: '키워드 (선택)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '생애주기비용(LCC) 절감효과',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('개선전'),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _beforeConstCostController,
+                            decoration: const InputDecoration(
+                              labelText: '건설사업 비용(백만원)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _beforeMaintCostController,
+                            decoration: const InputDecoration(
+                              labelText: '유지관리 비용(백만원)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _beforeTotalCostController,
+                      decoration: const InputDecoration(
+                        labelText: '계(백만원)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('개선후'),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _afterConstCostController,
+                            decoration: const InputDecoration(
+                              labelText: '건설사업 비용(백만원)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _afterMaintCostController,
+                            decoration: const InputDecoration(
+                              labelText: '유지관리 비용(백만원)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _afterTotalCostController,
+                      decoration: const InputDecoration(
+                        labelText: '계(백만원)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _savingAmountController,
+                            decoration: const InputDecoration(
+                              labelText: '절감액(백만원)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _savingRateController,
+                            decoration: const InputDecoration(
+                              labelText: '절감율(%)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '가치향상효과',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('개선전'),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _beforePerfScoreController,
+                            decoration: const InputDecoration(
+                              labelText: '성능점수(점)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _beforeValueScoreController,
+                            decoration: const InputDecoration(
+                              labelText: '가치점수(점)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('개선후'),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _afterPerfScoreController,
+                            decoration: const InputDecoration(
+                              labelText: '성능점수(점)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _afterValueScoreController,
+                            decoration: const InputDecoration(
+                              labelText: '가치점수(점)',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _authorController,
+                      decoration: const InputDecoration(
+                        labelText: '작성자 (선택)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _commentController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: '안전 규정 / 관리자 코멘트 (선택)',
+                        hintText: '현장에 꼭 전달하고 싶은 안전 유의사항이나 코멘트를 적어 주세요.',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _isSubmitting ? null : _submitChange,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send),
+                        label: Text(
+                            _isSubmitting ? '등록 중...' : '설계 변경 등록'),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-              const Text(
-                '제안정보',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                  labelText: '제안명',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                    return '제안명을 입력해 주세요.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                controller: _organizationController,
-                  decoration: const InputDecoration(
-                  labelText: '기관명',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                    return '기관명을 입력해 주세요.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-              TextFormField(
-                controller: _projectNameController,
-                decoration: const InputDecoration(
-                  labelText: '사업명',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return '사업명을 입력해 주세요.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _clientController,
-                decoration: const InputDecoration(
-                  labelText: '요청 발주처',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _keywordController,
-                decoration: const InputDecoration(
-                  labelText: '키워드 (선택)',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              const Text(
-                '생애주기비용(LCC) 절감효과',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text('개선전'),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _beforeConstCostController,
-                      decoration: const InputDecoration(
-                        labelText: '건설사업 비용(백만원)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _beforeMaintCostController,
-                      decoration: const InputDecoration(
-                        labelText: '유지관리 비용(백만원)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _beforeTotalCostController,
-                decoration: const InputDecoration(
-                  labelText: '계(백만원)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 16),
-              const Text('개선후'),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _afterConstCostController,
-                      decoration: const InputDecoration(
-                        labelText: '건설사업 비용(백만원)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _afterMaintCostController,
-                      decoration: const InputDecoration(
-                        labelText: '유지관리 비용(백만원)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _afterTotalCostController,
-                decoration: const InputDecoration(
-                  labelText: '계(백만원)',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _savingAmountController,
-                      decoration: const InputDecoration(
-                        labelText: '절감액(백만원)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _savingRateController,
-                      decoration: const InputDecoration(
-                        labelText: '절감율(%)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              const Text(
-                '가치향상효과',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text('개선전'),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _beforePerfScoreController,
-                      decoration: const InputDecoration(
-                        labelText: '성능점수(점)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _beforeValueScoreController,
-                      decoration: const InputDecoration(
-                        labelText: '가치점수(점)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Text('개선후'),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _afterPerfScoreController,
-                      decoration: const InputDecoration(
-                        labelText: '성능점수(점)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _afterValueScoreController,
-                      decoration: const InputDecoration(
-                        labelText: '가치점수(점)',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-                TextFormField(
-                  controller: _authorController,
-                  decoration: const InputDecoration(
-                    labelText: '작성자 (선택)',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isSubmitting ? null : _submitChange,
-                    icon: _isSubmitting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send),
-                    label: Text(_isSubmitting ? '등록 중...' : '설계 변경 등록'),
-                  ),
-                ),
-              ],
             ),
           ),
         ),

@@ -116,6 +116,9 @@ def add_design_change(change_input: DesignChangeInput) -> DesignChangeRecord:
         title=change_input.title,
         description=change_input.description,
         author=change_input.author,
+        organization=change_input.organization,
+        project_name=change_input.project_name,
+        client=change_input.client,
         created_at=datetime.utcnow(),
     )
 

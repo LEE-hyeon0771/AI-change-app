@@ -6,21 +6,23 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .services.agent import worker_chat
+from .services.agent import worker_chat, translate_latest_metadata_fields
 from .core.config import settings
 from .core.models import (
     AdminChangeResponse,
     DesignChangeInput,
     LatestChangeResponse,
     LatestChangeSummary,
+    LatestChangeTranslatedResponse,
     WorkerChatRequest,
     WorkerChatResponse,
+    LanguageCode,
 )
 from .services.vectorstore import add_design_change, get_latest_change, load_vectorstore
 
 app = FastAPI(
     title="AI Design Change App",
-    description="관리자/노동자용 설계변경 챗봇 백엔드 (FastAPI + LangChain + OpenAI + FAISS)",
+    description="관리자/작업자용 설계변경 챗봇 백엔드 (FastAPI + LangChain + OpenAI + FAISS)",
     version="0.1.0",
 )
 
@@ -76,7 +78,7 @@ def create_design_change(change: DesignChangeInput) -> AdminChangeResponse:
 @app.get("/worker/latest-change", response_model=LatestChangeResponse, tags=["worker"])
 def get_latest_change_for_worker() -> LatestChangeResponse:
     """
-    노동자 페이지에서 폴링해서 확인할 수 있는 최신 설계 변경 요약.
+    작업자 페이지에서 폴링해서 확인할 수 있는 최신 설계 변경 요약.
     - Flutter 쪽에서는 마지막으로 본 id 를 로컬에 저장해 두었다가,
       여기서 받은 latest.id 와 다르면 '새로운 설계변경이 있습니다' 알림을 띄우면 됨.
     """
@@ -99,8 +101,8 @@ def get_latest_change_for_worker() -> LatestChangeResponse:
 @app.post("/worker/chat", response_model=WorkerChatResponse, tags=["worker"])
 def worker_chat_endpoint(req: WorkerChatRequest) -> WorkerChatResponse:
     """
-    노동자 페이지에서 사용하는 챗봇 엔드포인트.
-    - language: 노동자가 선택한 언어 (ko, en, zh, ja, th)
+    작업자 페이지에서 사용하는 챗봇 엔드포인트.
+    - language: 작업자가 선택한 언어 (ko, en, zh, ja, th)
     - question: 질문 내용
     - history: (선택) 이전 대화 내역
     """
@@ -112,5 +114,39 @@ def worker_chat_endpoint(req: WorkerChatRequest) -> WorkerChatResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat failed: {e}")
 
+
+@app.get(
+    "/worker/latest-change-translated",
+    response_model=LatestChangeTranslatedResponse,
+    tags=["worker"],
+)
+def get_latest_change_translated(language: LanguageCode) -> LatestChangeTranslatedResponse:
+    """
+    선택된 언어로 번역된 최신 설계 변경 메타데이터 블록을 반환.
+    - 프론트의 '변경사항 보기' 다이얼로그에서 사용.
+    """
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured.")
+
+    record = get_latest_change()
+    if record is None:
+        raise HTTPException(status_code=404, detail="No design change found.")
+
+    try:
+        fields = translate_latest_metadata_fields(record, language)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to translate latest change: {e}"
+        )
+
+    return LatestChangeTranslatedResponse(
+        id=record.id,
+        language=language,
+        organization=fields["organization"],
+        project_name=fields["project_name"],
+        title=fields["title"],
+        client=fields["client"],
+        change_date=fields["change_date"],
+    )
 
 

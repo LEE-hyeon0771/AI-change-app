@@ -1,0 +1,5 @@
+Question from worker:
+{question}
+If there is any safety-related impact, highlight it clearly.
+
+

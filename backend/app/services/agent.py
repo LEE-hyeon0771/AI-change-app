@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Dict, List
-
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,8 +13,18 @@ from ..core.models import (
     WorkerChatRequest,
     WorkerChatResponse,
     WorkerChatAnswerSource,
+    DesignChangeRecord,
 )
 from .vectorstore import get_retriever
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+PROMPTS_DIR = BASE_DIR / "prompts"
+
+
+def _load_prompt(name: str) -> str:
+    path = PROMPTS_DIR / name
+    return path.read_text(encoding="utf-8")
 
 
 LANGUAGE_NAME_MAP: Dict[LanguageCode, str] = {
@@ -27,37 +37,28 @@ LANGUAGE_NAME_MAP: Dict[LanguageCode, str] = {
 
 
 def _build_system_prompt() -> str:
-    return (
-        "You are an AI assistant that explains engineering design change notices to on-site workers.\n"
-        "You MUST always answer in the target language specified by the user.\n"
-        "Use the provided design change documents as the primary source of truth.\n"
-        "If the question is unrelated to design changes, politely say you can only answer about design changes.\n"
-        "Explain in a concise and practical way that workers can easily understand.\n"
-        "Always include important dates, IDs, and what exactly changed in the design.\n"
-        "When answering about a specific proposal or design change, FIRST show a short summary block "
-        "with the key metadata (organization, project name, proposal name, proposal date, client / ordering party) "
-        "in the target language, then give a more detailed explanation.\n"
-    )
+    return _load_prompt("worker_system.txt")
 
 
 def _build_prompt() -> ChatPromptTemplate:
     system_prompt = _build_system_prompt()
+    language_prompt = _load_prompt("worker_language.txt")
+    context_prompt = _load_prompt("worker_context.txt")
+    human_prompt = _load_prompt("worker_human.txt")
     return ChatPromptTemplate.from_messages(
         [
             ("system", system_prompt),
             (
                 "system",
-                "Target language: {language_name} (code: {language_code}). "
-                "Answer ONLY in this language.",
+                language_prompt,
             ),
             (
                 "system",
-                "Here are relevant design change documents:\n{context}",
+                context_prompt,
             ),
             (
                 "human",
-                "Question from worker:\n{question}\n"
-                "If there is any safety-related impact, highlight it clearly.",
+                human_prompt,
             ),
         ]
     )
@@ -67,7 +68,7 @@ def _build_llm() -> ChatOpenAI:
     return ChatOpenAI(
         api_key=settings.openai_api_key,
         model=settings.openai_chat_model,
-        temperature=0.2,
+        temperature=0.0,
     )
 
 
@@ -152,5 +153,78 @@ def worker_chat(req: WorkerChatRequest) -> WorkerChatResponse:
         language=req.language,
         sources=sources,
     )
+
+
+def translate_latest_metadata_fields(
+    record: DesignChangeRecord, language: LanguageCode
+) -> dict[str, str]:
+    """기관명/사업명/제안명/제안일자/요청 발주처를 선택 언어로 번역한 필드 딕셔너리."""
+    # 한국어 탭이면 번역 필요 없음
+    base_fields = {
+        "organization": record.organization or "-",
+        "project_name": record.project_name or "-",
+        "title": record.title,
+        "change_date": record.change_date.isoformat(),
+        "client": record.client or "-",
+    }
+
+    if language == LanguageCode.ko:
+        return base_fields
+
+    llm = _build_llm()
+    language_name = LANGUAGE_NAME_MAP[language]
+
+    # 줄 단위로 번역: 파싱 오류를 없애기 위해 JSON 대신 라인 기반 프로토콜 사용
+    phrases = "\n".join(
+        [
+            base_fields["organization"],
+            base_fields["project_name"],
+            base_fields["title"],
+            base_fields["change_date"],
+            base_fields["client"],
+        ]
+    )
+
+    prompt = ChatPromptTemplate.from_messages(
+        [
+            (
+                "system",
+                (
+                    "You will receive EXACTLY 5 Korean phrases, one per line, "
+                    "describing metadata of a design change.\n"
+                    "Target language: {language_name} (code: {language_code}).\n"
+                    "- Translate EACH line into the target language.\n"
+                    "- Keep the order of lines exactly the same.\n"
+                    "- Do NOT add numbers, bullets, labels, or extra commentary.\n"
+                    "- The output MUST contain exactly 5 lines, each line only the translated phrase."
+                ),
+            ),
+            ("human", "Korean phrases (one per line):\n{phrases}"),
+        ]
+    )
+
+    chain = prompt | llm | StrOutputParser()
+
+    try:
+        raw = chain.invoke(
+            {
+                "language_name": language_name,
+                "language_code": language.value,
+                "phrases": phrases,
+            }
+        )
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        keys = ["organization", "project_name", "title", "change_date", "client"]
+        result: dict[str, str] = {}
+        for idx, key in enumerate(keys):
+            if idx < len(lines):
+                result[key] = lines[idx]
+            else:
+                result[key] = base_fields[key]
+        return result
+    except Exception:
+        # 실패 시 원문 필드 사용
+        return base_fields
+
 
 

@@ -54,10 +54,22 @@ class LatestChangeSummary(BaseModel):
 
 
 class LatestChangeResponse(BaseModel):
-    """노동자 페이지에서 폴링할 최신 변경 요약."""
+    """작업자 페이지에서 폴링할 최신 변경 요약."""
 
     has_change: bool
     latest: Optional[LatestChangeSummary] = None
+
+
+class LatestChangeTranslatedResponse(BaseModel):
+    """언어별로 번역된 최신 변경 요약 (필드 단위)."""
+
+    id: str
+    language: LanguageCode
+    organization: str
+    project_name: str
+    title: str
+    client: str
+    change_date: str
 
 
 class ChatMessage(BaseModel):
@@ -67,12 +79,12 @@ class ChatMessage(BaseModel):
 
 class WorkerChatRequest(BaseModel):
     language: LanguageCode = Field(
-        description="노동자가 선택한 언어 코드",
+        description="작업자가 선택한 언어 코드",
         examples=["ko", "en", "zh", "vi", "uk"],
     )
-    question: str = Field(description="노동자가 물어보는 질문")
+    question: str = Field(description="작업자가 물어보는 질문")
     worker_id: Optional[str] = Field(
-        default=None, description="노동자 ID (로그/추적용, 선택)"
+        default=None, description="작업자 ID (로그/추적용, 선택)"
     )
     history: Optional[List[ChatMessage]] = Field(
         default=None, description="간단한 이전 대화 내역 (선택)"
