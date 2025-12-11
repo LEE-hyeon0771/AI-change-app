@@ -218,10 +218,13 @@ flutter run
     - `변경사항 보기` : Dialog 로 **기관명/사업명/제안명/제안일자/요청 발주처** 표시
     - `확인/읽음` : 마지막 확인한 변경 ID 업데이트
 
-- **다국어 탭 + 챗봇**
+- **다국어 탭 + 챗봇 (UI 완전 현지화)**
   - `DefaultTabController` 로 5개 탭:
     - 한국어(ko), English(en), 中文(zh), Tiếng Việt(vi), Українська(uk)
   - 각 탭은 `WorkerChatTab(languageCode: 'ko' | 'en' | ...)` 인스턴스.
+  - 탭에 따라 다음 UI 텍스트가 모두 변경됨:
+    - 앱바 제목, 알림 문구, 버튼 라벨, 다이얼로그 제목/버튼, 입력 힌트 등
+    - 각 언어별 문자열은 `_WorkerLanguage` 클래스에서 관리 (프론트 코드 내 하드코딩)
 
 - **채팅 동작**
   - 사용자가 질문 입력 → `_sendMessage()` 호출:
@@ -301,6 +304,16 @@ flutter run
     - `answer` : 지정 언어로 생성된 설명
     - `language` : 언어 코드
     - `sources` : 사용된 문서의 `id`, `title` 목록
+
+- **변경사항 보기 다국어 메타데이터**
+  - `GET /worker/latest-change-translated?language=ko|en|zh|vi|uk`
+    - 백엔드에서 최신 설계변경의 메타데이터(기관명/사업명/제안명/제안일자/요청 발주처)를 선택 언어로 번역.
+    - `backend/app/services/agent.py` 의 `translate_latest_metadata_fields()` 가 OpenAI Chat 모델을 사용해 필드별로 번역/음역 수행.
+    - JSON 파싱 오류를 피하기 위해 **5개 문장을 줄 단위로 번역**시키고, 순서대로 `organization/project_name/title/change_date/client` 에 매핑.
+  - 프론트 (`worker.dart`) 에서는:
+    - 라벨(예: “기관명”, “Project name”, “机构”) 은 `_WorkerLanguage` 에서 언어별로 정의.
+    - 값(실제 기관명/사업명/제안명/요청 발주처/날짜) 은 위 번역 API 응답을 그대로 사용.
+    - 따라서 **라벨 + 값 모두가 선택 언어로 표시**되며, 한국어 탭에서는 원문 그대로 노출.
 
 ### 5-4. LangChain 에이전트 (RAG 체인) 개요
 
