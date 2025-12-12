@@ -1,0 +1,116 @@
+=== PER-CASE METRICS ===
+case1 (case_pos_001, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case2 (case_pos_002, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case3 (case_pos_003, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case4 (case_pos_004, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case5 (case_pos_005, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case6 (case_pos_006, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case7 (case_pos_007, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case8 (case_pos_008, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case9 (case_pos_009, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case10 (case_pos_010, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case11 (case_pos_011, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case12 (case_pos_012, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case13 (case_pos_013, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case14 (case_pos_014, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case15 (case_pos_015, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case16 (case_pos_016, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case17 (case_pos_017, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case18 (case_pos_018, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case19 (case_pos_019, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case20 (case_pos_020, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case21 (case_pos_021, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case22 (case_pos_022, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case23 (case_pos_023, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case24 (case_pos_024, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case25 (case_pos_025, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case26 (case_pos_026, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case27 (case_pos_027, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case28 (case_pos_028, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case29 (case_pos_029, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case30 (case_pos_030, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case31 (case_pos_031, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case32 (case_pos_032, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case33 (case_pos_033, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case34 (case_pos_034, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case35 (case_pos_035, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case36 (case_pos_036, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case37 (case_pos_037, type=positive): hit@5=1, precision@5=0.25, recall@5=1.0
+case38 (case_pos_038, type=positive): hit@5=0, precision@5=0.0, recall@5=0.0
+case39 (case_pos_039, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+case40 (case_pos_040, type=positive): hit@5=1, precision@5=0.2, recall@5=1.0
+
+case41 (case_multi_001, type=multi): hit@5=1, precision@5=0.4, recall@5=0.5
+case42 (case_multi_002, type=multi): hit@5=1, precision@5=0.4, recall@5=0.5
+case43 (case_multi_003, type=multi): hit@5=0, precision@5=0.0, recall@5=0.0
+case44 (case_multi_004, type=multi): hit@5=1, precision@5=0.2, recall@5=0.5
+case45 (case_multi_005, type=multi): hit@5=1, precision@5=0.4, recall@5=1.0
+case46 (case_multi_006, type=multi): hit@5=1, precision@5=0.2, recall@5=0.5
+case47 (case_multi_007, type=multi): hit@5=1, precision@5=0.4, recall@5=1.0
+case48 (case_multi_008, type=multi): hit@5=0, precision@5=0.0, recall@5=0.0
+case49 (case_multi_009, type=multi): hit@5=1, precision@5=0.4, recall@5=0.5
+case50 (case_multi_010, type=multi): hit@5=1, precision@5=0.2, recall@5=0.5
+case51 (case_multi_011, type=multi): hit@5=1, precision@5=0.4, recall@5=1.0
+case52 (case_multi_012, type=multi): hit@5=0, precision@5=0.0, recall@5=0.0
+case53 (case_multi_013, type=multi): hit@5=1, precision@5=0.4, recall@5=0.5
+case54 (case_multi_014, type=multi): hit@5=1, precision@5=0.2, recall@5=0.5
+case55 (case_multi_015, type=multi): hit@5=1, precision@5=0.4, recall@5=1.0
+
+case56 (case_neg_001, type=negative): hallucination=0
+case57 (case_neg_002, type=negative): hallucination=0
+case58 (case_neg_003, type=negative): hallucination=1
+case59 (case_neg_004, type=negative): hallucination=0
+case60 (case_neg_005, type=negative): hallucination=0
+case61 (case_neg_006, type=negative): hallucination=0
+case62 (case_neg_007, type=negative): hallucination=1
+case63 (case_neg_008, type=negative): hallucination=0
+case64 (case_neg_009, type=negative): hallucination=0
+case65 (case_neg_010, type=negative): hallucination=0
+case66 (case_neg_011, type=negative): hallucination=0
+case67 (case_neg_012, type=negative): hallucination=1
+case68 (case_neg_013, type=negative): hallucination=0
+case69 (case_neg_014, type=negative): hallucination=0
+case70 (case_neg_015, type=negative): hallucination=0
+
+case71 (case_oos_001, type=oos): hallucination=0
+case72 (case_oos_002, type=oos): hallucination=0
+case73 (case_oos_003, type=oos): hallucination=1
+case74 (case_oos_004, type=oos): hallucination=0
+case75 (case_oos_005, type=oos): hallucination=0
+case76 (case_oos_006, type=oos): hallucination=0
+case77 (case_oos_007, type=oos): hallucination=1
+case78 (case_oos_008, type=oos): hallucination=0
+case79 (case_oos_009, type=oos): hallucination=0
+case80 (case_oos_010, type=oos): hallucination=0
+
+case81 (case_oos_011, type=oos): hallucination=0
+case82 (case_oos_012, type=oos): hallucination=0
+case83 (case_oos_013, type=oos): hallucination=1
+case84 (case_oos_014, type=oos): hallucination=0
+case85 (case_oos_015, type=oos): hallucination=0
+case86 (case_oos_016, type=oos): hallucination=0
+case87 (case_oos_017, type=oos): hallucination=0
+case88 (case_oos_018, type=oos): hallucination=0
+case89 (case_oos_019, type=oos): hallucination=1
+case90 (case_oos_020, type=oos): hallucination=0
+
+case91 (case_oos_021, type=oos): hallucination=0
+case92 (case_oos_022, type=oos): hallucination=0
+case93 (case_oos_023, type=oos): hallucination=1
+case94 (case_oos_024, type=oos): hallucination=0
+case95 (case_oos_025, type=oos): hallucination=0
+case96 (case_oos_026, type=oos): hallucination=0
+case97 (case_oos_027, type=oos): hallucination=0
+case98 (case_oos_028, type=oos): hallucination=0
+case99 (case_oos_029, type=oos): hallucination=1
+case100 (case_oos_030, type=oos): hallucination=0
+
+=== SUMMARY (AVERAGE METRICS) ===
+- total cases           : 100
+- positive/multi cases  : 55
+- negative/oos cases    : 45
+
+- avg hit@5       : 0.727
+- avg precision@5 : 0.231
+- avg recall@5    : 0.706
+- hallucination rate    : 0.178  (negative/oos cases)

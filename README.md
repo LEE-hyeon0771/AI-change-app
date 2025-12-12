@@ -373,7 +373,81 @@ flutter run
 
 ---
 
-## 7. 향후 확장 아이디어
+## 7. 성능 평가 (RAG & LLM-as-judge)
+
+### 7-1. LLM-as-judge 기반 답변 품질 평가
+
+- **스크립트 위치**: `backend/app/eval_llm_judge.py`
+- **평가 절차**
+  - 미리 정의한 소규모 테스트 케이스 리스트(`TEST_CASES`)를 기준으로, 각 케이스에 대해:
+    - `POST /worker/chat` 호출 → 실제 RAG 답변(`answer`, `sources`) 획득
+    - OpenAI Chat 모델(`gpt-4.1-mini`)을 **판사(judge)** 로 사용해, 아래 4개 지표를 1–5점으로 채점
+  - 결과는 `rag_eval_llm_judge.txt` 로 저장되어, 케이스별 질문/답변/출처/점수/코멘트를 한 번에 확인 가능.
+- **평가지표 (각 1–5점, 정수)**
+  - **relevance**: 질문에 얼마나 직접/완전하게 답했는지
+    - 5: 질문 의도와 핵심을 정확히 짚고 답변
+    - 3: 일부만 답하거나 불필요한 내용이 섞임
+    - 1: 대부분 엉뚱하거나 질문에 답하지 않음
+  - **coverage**: 미리 정의한 `expected_key_points` 를 얼마나 잘 포함했는지
+    - key point 를 “답변이 명시적으로 언급하거나, 데이터에 없다고 분명히 말하면(예: `미기재`, `Not specified`)” **커버한 것**으로 간주
+    - 5: 거의 모든 key point 커버, 3: 절반 수준, 1: 거의 커버하지 못함
+  - **structure**: 답변 구조가 “메타데이터 요약 블록 → 상세 설명” 패턴을 얼마나 잘 따르는지
+    - 이상적 구조:
+      - 맨 위에 기관명/사업명/제안명/제안일자/요청 발주처 등을 한눈에 볼 수 있는 **요약 블록**
+      - 그 아래에 LCC 절감 효과, 배경 설명, 주의사항 등의 **설명 문단**
+    - 5: 이 패턴이 명확히 지켜짐, 3: 일부 섞여 있지만 대략 구분 가능, 1: 구조가 거의 없어서 메타데이터와 설명이 뒤섞여 있음
+  - **language_quality**: 선택된 언어 코드(ko/en/zh/vi/uk)에 맞춰 자연스럽고 이해하기 쉬운지
+    - 5: 매우 자연스럽고 명확함, 3: 약간 어색하지만 의미 전달에는 문제 없음, 1: 문법/언어 선택 문제로 이해가 어렵거나 언어 코드와 맞지 않음
+- **출력 코멘트**
+  - `comment` 필드에 한국어로 “어떤 이유로 점수를 그렇게 줬는지”를 짧게 요약하여, 사람 검토 시 해석을 돕도록 설계.
+
+### 7-2. RAG Retrieval 성능 평가
+
+- **스크립트 위치**: `backend/app/eval_rag_retrieval.py`
+- **테스트셋 포맷 (`rag_testset.json`)**
+  - 루트: 리스트
+  - 각 항목 예시:
+    ```json
+    {
+      "id": "case_ko_01",
+      "language": "ko",
+      "question": "성남복정1 C3BL 설계 변경 내용과 LCC 절감 효과를 알려줘.",
+      "gold_doc_ids": ["09715d1100d84681b14a3aa90ce4586d"],
+      "type": "positive"   // "positive" | "multi" | "negative" | "oos"
+    }
+    ```
+  - **positive/multi**: 정답 문서 ID(`gold_doc_ids`)가 하나 이상 있는 일반 RAG 케이스
+  - **negative/oos**: 정답이 없는 케이스 (존재하지 않는 조합, 도메인 외 질문 등) → hallucination 여부만 평가.
+- **평가지표 정의 (top-k 기준, 기본 k=5)**
+  - **hit@k**
+    - 정의: `gold_doc_ids` 집합과, RAG가 반환한 상위 k개 문서 ID 집합이 한 번이라도 겹치면 1, 아니면 0
+    - 의미: “정답 문서가 최소 1개라도 top-k 안에 들어갔는지”
+  - **precision@k**
+    - 정의: \\(|gold ∩ pred\_top\_k| / |pred\_top\_k|\\)
+    - 의미: “top-k 결과 중에서 진짜 정답 비율”
+  - **recall@k**
+    - 정의: \\(|gold ∩ pred\_top\_k| / |gold|\\)
+    - 의미: “정답 문서들 중 얼마나 많이 top-k 안에 들어왔는지”
+  - **hallucination rate** (negative/oos 전용)
+    - negative/oos 케이스에서 **아무 문서도 반환하지 않으면 0**,  
+      어떤 문서든 반환하면 1로 간주하여, 전체 비율을 계산
+    - 의미: “정답이 ‘없어야 하는’ 질문에 대해, RAG가 억지로 문서를 끌어와 답한 비율”
+- **출력**
+  - 케이스별:
+    - 질문, gold 문서 ID, 반환된 문서 ID(top-k),
+    - `hit@k`, `precision@k`, `recall@k`, (negative/oos인 경우) `hallucination` 플래그
+  - 요약:
+    - 전체 케이스 수, positive/negative 개수
+    - 평균 `hit@k` / `precision@k` / `recall@k`
+    - negative/oos 케이스 기준 **hallucination rate**
+  - 결과 파일: `rag_eval_retrieval.txt`
+
+이 섹션을 참고하면, 프로젝트에 처음 들어온 사람도  
+“어떤 기준(지표)으로 RAG와 답변 품질을 평가했고, 스크립트와 결과물이 어디에 있는지”를 한눈에 이해할 수 있다.
+
+---
+
+## 8. 향후 확장 아이디어
 
 - **권한/인증**
   - 관리자/작업자 인증 및 역할 기반 접근 제어(RBAC)

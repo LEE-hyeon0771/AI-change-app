@@ -190,9 +190,27 @@ def main() -> None:
 
         rows.append(row)
 
+    # 케이스별 간단 metric 요약 (case1, case2, ...)
+    per_case_lines: List[str] = []
+    per_case_lines.append("=== PER-CASE METRICS ===")
+    for idx, row in enumerate(rows, start=1):
+        case_label = f"case{idx} ({row['case_id']}, type={row['type']})"
+        if row.get("gold_doc_ids"):  # positive/multi
+            hit = row.get("hit_at_k", "-")
+            prec = row.get("precision_at_k", "-")
+            rec = row.get("recall_at_k", "-")
+            per_case_lines.append(
+                f"{case_label}: hit@{TOP_K}={hit}, precision@{TOP_K}={prec}, recall@{TOP_K}={rec}"
+            )
+        else:  # negative / oos
+            hallu = row.get("hallucination", "-")
+            per_case_lines.append(f"{case_label}: hallucination={hallu}")
+
+    per_case_lines.append("")
+
     # 요약 통계 계산
     summary_lines: List[str] = []
-    summary_lines.append("=== SUMMARY ===")
+    summary_lines.append("=== SUMMARY (AVERAGE METRICS) ===")
     summary_lines.append(f"- total cases           : {len(cases)}")
     summary_lines.append(f"- positive/multi cases  : {pos_cnt}")
     summary_lines.append(f"- negative/oos cases    : {neg_cnt}")
@@ -219,8 +237,8 @@ def main() -> None:
     summary_lines.append("")
 
     # TXT 리포트 작성
-    blocks = [format_case_block(r) for r in rows]
-    report = "\n".join(blocks) + "\n" + "\n".join(summary_lines)
+    # 상세 블록은 생략하고, 케이스별 요약 + 평균 지표만 출력
+    report = "\n".join(per_case_lines) + "\n" + "\n".join(summary_lines)
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         f.write(report)
