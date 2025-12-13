@@ -27,29 +27,54 @@
 
 ## 2. 전체 아키텍처 개요
 
-- **Frontend (Flutter)**
-  - 앱 구조: `frontend_flutter/lib`
-    - `main.dart` : 홈(역할 선택) 화면
-    - `administer.dart` : 관리자용 설계 변경/VE 제안 등록 페이지
-    - `worker.dart` : 작업자용 페이지 (알림 + 다국어 챗봇)
-  - 타겟: 웹(Chrome) 및 모바일(에뮬레이터/실디바이스)
+### 2-1. 전체 폴더 구조
 
-- **Backend (FastAPI + LangChain + OpenAI + FAISS)**
-  - 디렉터리: `backend/app`
-    - `core/`
-      - `config.py` : 설정 및 .env 로딩, OpenAI 모델/키, 데이터 디렉터리
-      - `models.py` : Pydantic 데이터 모델
-    - `services/`
-      - `vectorstore.py` : FAISS 기반 벡터 DB (임베딩, 저장, 검색)
-      - `agent.py` : LangChain RAG 에이전트 (작업자용 다국어 챗봇)
-      - `ingest_existing_data.py` : JSONL 기반 초기 데이터 적재
-      - `ingest_ve_csv.py` : **엑셀/CSV VE 제안 목록 → 벡터DB** 인제스트
-    - `main.py` : FastAPI 엔트리포인트 (관리자/작업자 API)
+```text
+AI-change-app/
+  README.md
+  Makefile
+  venv/                    # 파이썬 가상환경 (있을 수 있음)
 
-- **데이터/벡터 저장 위치**
-  - `backend/data/faiss_index/index.faiss` : FAISS 인덱스
-  - `backend/data/faiss_index/index.pkl` : 메타데이터/Docstore
-  - `backend/data/change_log.jsonl` : 설계변경 기록(append only 로그)
+  backend/
+    requirements.txt
+    rag_eval_llm_judge.txt
+    rag_eval_retrieval.txt
+    data/
+      change_log.jsonl
+      faiss_index/
+        index.faiss
+        index.pkl
+      설계VE 상세내용 - VE제안 목록*.xlsx  # VE 엑셀 원본들
+    app/
+      main.py              # FastAPI 서버 엔트리포인트
+      eval_llm_judge.py    # LLM-as-judge 평가 스크립트
+      eval_rag_retrieval.py# RAG Retrieval 평가 스크립트
+      core/
+        __init__.py
+        config.py          # 환경설정, .env 로딩
+        models.py          # Pydantic 데이터 모델
+      services/
+        __init__.py
+        agent.py           # RAG 에이전트(챗봇 두뇌)
+        vectorstore.py     # FAISS 벡터 DB
+        ingest_existing_data.py
+        ingest_ve_csv.py   # VE 엑셀/CSV 인제스트
+      prompts/
+        worker_system.txt
+        worker_language.txt
+        worker_context.txt
+        worker_human.txt
+
+  frontend_flutter/
+    pubspec.yaml
+    pubspec.lock
+    build/                 # Flutter 빌드 결과물
+    lib/
+      main.dart            # 앱 시작(역할 선택 화면)
+      administer.dart      # 관리자 화면
+      api_config.dart      # 백엔드 API 주소 설정
+      worker.dart          # 작업자 화면(알림 + 다국어 챗봇)
+```
 
 ---
 
