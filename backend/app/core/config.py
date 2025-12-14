@@ -18,7 +18,7 @@ class Settings(BaseModel):
     """Application configuration."""
 
     openai_api_key: str = Field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
-    openai_chat_model: str = "gpt-3.5-turbo"
+    openai_chat_model: str = "gpt-4.1-mini"
     openai_embedding_model: str = "text-embedding-3-small"
 
     data_dir: Path = Field(default_factory=lambda: Path("data"))
